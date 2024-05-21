@@ -1,7 +1,9 @@
 {
   "name": "javascript-minesweeper",
   "version": "1.0.0",
+  
   "main": "index.js",
+  
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,5 +13,8 @@
   "description": "",
   "dependencies": {
     "prompt-sync": "^4.2.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   }
 }
