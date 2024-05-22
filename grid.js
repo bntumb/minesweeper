@@ -1,40 +1,60 @@
-const prompt = require('prompt-sync')(); // Import prompt-sync module
-const gridSize = 6;
 
-const failed =   
-`
-██     ██  █████  ███████ ████████ ███████ ██████  
-██     ██ ██   ██ ██         ██    ██      ██   ██
-██  █  ██ ███████ ███████    ██    █████   ██   ██
-██ ███ ██ ██   ██      ██    ██    ██      ██   ██
- ███ ███  ██   ██ ███████    ██    ███████ ███████
- `
+
+
+import { prompt, GRID_SIZE, MINE_DENSITY, FAILED_ASCII_ART } from './data.js';
+
+class Cell {
+    constructor(row, column, value = false) {
+        this.row = row;
+        this.column = column;
+        this.value = value;
+        this.revealed = false;
+        this.adjacentMines = 0; // New property to store the count of adjacent mines
+        this.flagged = false;   // Property to indicate if the cell is flagged
+    }
+
+    reveal() {
+        this.revealed = true;
+    }
+
+    outputCell() {
+        const cellIndex = ` ${this.row * GRID_SIZE + this.column} `;
+
+        if (this.flagged) {
+            return ` ${cellIndex} (🚩)`;
+        } else if (this.revealed) {
+            if (this.value) {
+                return ' 💣 ';
+            } else if (this.adjacentMines > 0) {
+                return ` ${cellIndex} (${this.adjacentMines}) `;
+            } else {
+                return `${cellIndex}(E)`;
+            }
+        } else {
+            return ` ${cellIndex} `;
+        }
+    }
+}
 
 class Grid {
     constructor(size) {
         this.size = size;
-        this.grid = this.generateGrid(size);
+        this.cells = this.generateCells(size);
+        this.updateAdjacentMineCounts(); // Calculate the adjacent mine counts after generating cells
     }
 
-    generateGrid(size) {
-        const mineDensity = 0.15;
+    generateCells(size) {
         const cellCount = size * size;
-        const mineCount = Math.ceil(cellCount * mineDensity);
-
-        // Create an array with the required amount of mines and empty cells
+        const mineCount = Math.ceil(cellCount * MINE_DENSITY);
+        console.log(`Take care! There ${mineCount > 1 ? "are" : "is"} ${mineCount} ${mineCount > 1 ? "mines" : "mine"} out there`);
         const values = Array(mineCount).fill(true).concat(Array(cellCount - mineCount).fill(false));
-
-        this.shuffle(values); // Place the mines randomly in the array
-
-        // Create the grid from the shuffled values
-        const grid = [];
-        for (let row = 0; row < size; row++) {
-            for (let column = 0; column < size; column++) {
-                const value = values.pop(); // Remove the last value and add it to the grid
-                grid.push({ row, column, value });
-            }
-        }
-        return grid;
+        this.shuffle(values);
+        return Array.from({ length: size }, (_, row) => {
+            return Array.from({ length: size }, (_, column) => {
+                const value = values.pop();
+                return new Cell(row, column, value);
+            });
+        });
     }
 
     shuffle(array) {
@@ -45,62 +65,78 @@ class Grid {
     }
 
     getCell(row, column) {
-        return this.grid[row * this.size + column];
+        return this.cells[row][column];
     }
 
-    getCellCoordinates(index) {
-        const row = Math.floor(index / this.size);
-        const column = index % this.size;
-        return { row, column };
+    revealCell(row, column) {
+        const cell = this.getCell(row, column);
+        if (!cell.revealed) {
+            cell.reveal();
+            if (cell.value) {
+                return false; // Return false if a mine is revealed
+            }
+        }
+        return true; // Return true otherwise
     }
 
-    getCellByIndex(index) {
-        const { row, column } = this.getCellCoordinates(index);
-        return this.getCell(row, column);
+    isValid(row, column) {
+        return row >= 0 && row < this.size && column >= 0 && column < this.size;
     }
 
-    printGrid() {
-        const border = '+-----'.repeat(this.size) + '+';
-        console.log(border);
-        let cellCounter = 0;
-        for (let row = 0; row < this.size; row++) {
-            let rowString = '|';
-            for (let column = 0; column < this.size; column++) {
-                const cell = this.getCell(row, column);
-                if (cell.value) {
-                    rowString += ` ${"💣".padStart(3)} |`;
-                } else {
-                    rowString += ` ${(cellCounter).toString().padStart(3)} |`;
+    updateAdjacentMineCounts() {
+        const directions = [
+            [-1, -1],//up left, 
+            [-1, 0],//up 
+            [0, -1],         [0, 1],
+            [1, -1], [1, 0], [1, 1]
+        ];
+        
+        this.cells.forEach(row => {
+            row.forEach(cell => {
+                if (!cell.value) {
+                    let count = 0;
+                    directions.forEach(([dx, dy]) => {
+                        const newRow = cell.row + dx;
+                        const newColumn = cell.column + dy;
+                        if (this.isValid(newRow, newColumn) && this.getCell(newRow, newColumn).value) {
+                            count++;
+                        }
+                    });
+                    cell.adjacentMines = count;
                 }
-                cellCounter++;
-            }
-            console.log(rowString);
-            console.log(border);
-        }
-        console.log("");
+            });
+        });
     }
 
-    printUnrevealedGrid() {
-        const border = '+-----'.repeat(this.size) + '+';
+    revealAllMines() {
+        this.cells.forEach(row => {
+            row.forEach(cell => {
+                if (cell.value) {
+                    cell.reveal();
+                }
+            });
+        });
+    }
+
+    print() {
+        const border = '+-------------'.repeat(this.size) + '+';
         console.log(border);
-        let cellCounter = 0;
-        for (let row = 0; row < this.size; row++) {
+        this.cells.forEach(row => {
             let rowString = '|';
-            for (let column = 0; column < this.size; column++) {
-                rowString += ` ${(cellCounter).toString().padStart(3)} |`;
-                cellCounter++;
-            }
+            row.forEach(cell => {
+                rowString += cell.outputCell().padStart(13) + '|';
+            });
             console.log(rowString);
             console.log(border);
-        }
-        console.log("");
+        });
+        console.log('');
     }
 }
 
 class GameTracker {
     constructor(size) {
         this.grid = new Grid(size);
-        this.gameState = true; // Assume game state starts as true
+        this.gameState = true;
     }
 
     setGameState(state) {
@@ -114,63 +150,81 @@ class GameTracker {
     getGrid() {
         return this.grid;
     }
-
-    // Other game-related methods can be added here
 }
 
 class Player {
     constructor(gameTracker) {
         this.gameTracker = gameTracker;
+        this.isFirstClick = true;
     }
 
     askForGameState() {
-        const input = prompt('Start Game (y/n): ');
-        if (input === 'y') {
-            this.gameTracker.setGameState(true);
-        } else if (input === 'n') {
-            this.gameTracker.setGameState(false);
-        } else {
-            console.log('Invalid input. Please enter "y" or "n".');
+        let input = '';
+        while (input !== 'y' && input !== 'n') {
+            input = prompt('Start Game (y/n): ');
+            if (input === 'y') {
+                this.gameTracker.setGameState(true);
+            } else if (input === 'n') {
+                this.gameTracker.setGameState(false);
+            } else {
+                console.log('Invalid input. Please enter "y" or "n".');
+            }
         }
     }
 
     askForCellCoordinates() {
-        const index = parseInt(prompt('Enter the cell number: '), 10);
-        const cell = this.gameTracker.getGrid().getCellByIndex(index);
+        const input = prompt('Enter the cell number (e.g., 10 or 10f to flag): ');
+        let flag = false;
 
-        console.log(`Cell at index ${index}:`, cell.value);
-        return(cell.value);
-        
-    }
+        if (input.endsWith('f') || input.endsWith('F')) {
+            flag = true;
+        }
 
-    // Method to start interaction
-    start() {
-        while (true) {
-            this.askForGameState();
-            this.gameTracker.getGrid().printGrid(); // Always print the grid after game state change
-            if (this.gameTracker.getGameState()) {
-                // this.gameTracker.getGrid().printGrid(); // Always print the grid after game state change
-                const result = this.askForCellCoordinates();
-                if (result == true){
-                    console.log(failed);
-                    break;
-                    
-                } else{
-                    this.askForCellCoordinates()
-                };
-                
-            } else {
-                return false
-                break;
+        const index = parseInt(input, 10);
+        if (isNaN(index) || index < 0 || index >= GRID_SIZE * GRID_SIZE) {
+            console.log('Invalid cell number. Please try again.');
+            return;
+        }
+
+        const row = Math.floor(index / GRID_SIZE);
+        const column = index % GRID_SIZE;
+        const cell = this.gameTracker.getGrid().getCell(row, column);
+
+        if (this.isFirstClick && cell.value) {
+            console.log('First click on a mine! Creating new grid...');
+            this.gameTracker.grid = new Grid(GRID_SIZE);
+            this.isFirstClick = true;
+            return;
+        }
+
+        if (flag) {
+            cell.flagged = true;
+            console.log(`Cell (${row}, ${column}) flagged.`);
+        } else {
+            const isSafe = this.gameTracker.getGrid().revealCell(row, column);
+            console.log(`(row: ${row}, col: ${column}): value: ${cell.value ? "mine" : "no mine here"}`);
+    
+            if (!isSafe) {
+                this.gameTracker.setGameState(false);
             }
         }
+
+        this.isFirstClick = false;
+    }
+
+    start() {
+        this.askForGameState();
+        while (this.gameTracker.getGameState()) {
+            this.gameTracker.getGrid().print();
+            this.askForCellCoordinates();
+        }
+        this.gameTracker.getGrid().revealAllMines();
+        this.gameTracker.getGrid().print();
+        console.log("You hit a mine\n" + FAILED_ASCII_ART);
     }
 }
 
-// Example usage
-const gameTracker = new GameTracker(gridSize); // Create a grid of specified size
+const gameTracker = new GameTracker(GRID_SIZE);
 const player = new Player(gameTracker);
-
-// Start the player interaction
 player.start();
 
