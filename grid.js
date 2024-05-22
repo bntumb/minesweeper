@@ -1,6 +1,6 @@
 
 
-import { prompt, GRID_SIZE, MINE_DENSITY, FAILED_ASCII_ART } from './data.js';
+import { prompt, GRID_SIZE, MINE_DENSITY, FAILED_ASCII_ART, DIRECTIONS } from './constants.js';
 
 class Cell {
     constructor(row, column, value = false) {
@@ -27,7 +27,7 @@ class Cell {
             } else if (this.adjacentMines > 0) {
                 return ` ${cellIndex} (${this.adjacentMines}) `;
             } else {
-                return `${cellIndex}(E)`;
+                return `${cellIndex}(Empty)`;
             }
         } else {
             return ` ${cellIndex} `;
@@ -85,17 +85,12 @@ class Grid {
     }
 
     updateAdjacentMineCounts() {
-        const directions = [
-            [-1, -1], [-1, 0], [-1, 1],
-            [0, -1],           [0, 1],
-            [1, -1], [1, 0], [1, 1]
-        ];
-        
+
         this.cells.forEach(row => {
             row.forEach(cell => {
                 if (!cell.value) {
                     let count = 0;
-                    directions.forEach(([dx, dy]) => {
+                    DIRECTIONS.forEach(([dx, dy]) => {
                         const newRow = cell.row + dx;
                         const newColumn = cell.column + dy;
                         if (this.isValid(newRow, newColumn) && this.getCell(newRow, newColumn).value) {
@@ -109,13 +104,11 @@ class Grid {
     }
 
     revealAdjacentCells(row, column) {
-        const directions = [
-            [-1, -1], [-1, 0], [-1, 1],
-            [0, -1],           [0, 1],
-            [1, -1], [1, 0], [1, 1]
-        ];
 
-        directions.forEach(([dx, dy]) => {
+
+
+        // re
+        DIRECTIONS.forEach(([dx, dy]) => {
             const newRow = row + dx;
             const newColumn = column + dy;
             if (this.isValid(newRow, newColumn)) {
@@ -146,7 +139,7 @@ class Grid {
         this.cells.forEach(row => {
             let rowString = '|';
             row.forEach(cell => {
-                rowString += cell.outputCell().padStart(13) + '|';
+                rowString += cell.outputCell().padEnd(13) + '|';
             });
             console.log(rowString);
             console.log(border);
@@ -181,7 +174,7 @@ class Player {
         this.isFirstClick = true;
     }
 
-    askForGameState() {
+    selectForGameState() {
         let input = '';
         while (input !== 'y' && input !== 'n') {
             input = prompt('Start Game (y/n): ');
@@ -195,7 +188,7 @@ class Player {
         }
     }
 
-    askForCellCoordinates() {
+    selectForCellCoordinates() {
         const input = prompt('Enter the cell number (e.g., 10 or 10f to flag): ');
         let flag = false;
 
@@ -236,14 +229,14 @@ class Player {
     }
 
     start() {
-        this.askForGameState();
+        this.selectForGameState();
         while (this.gameTracker.getGameState()) {
             this.gameTracker.getGrid().print();
-            this.askForCellCoordinates();
+            this.selectForCellCoordinates();
         }
         this.gameTracker.getGrid().revealAllMines();
         this.gameTracker.getGrid().print();
-        console.log("You hit a mine\n" + FAILED_ASCII_ART);
+        console.log(FAILED_ASCII_ART);
     }
 }
 
