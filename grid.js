@@ -1,6 +1,5 @@
 
 
-
 import { prompt, GRID_SIZE, MINE_DENSITY, FAILED_ASCII_ART } from './data.js';
 
 class Cell {
@@ -74,6 +73,8 @@ class Grid {
             cell.reveal();
             if (cell.value) {
                 return false; // Return false if a mine is revealed
+            } else if (cell.adjacentMines === 0) {
+                this.revealAdjacentCells(row, column); // Reveal adjacent cells if no adjacent mines
             }
         }
         return true; // Return true otherwise
@@ -85,9 +86,8 @@ class Grid {
 
     updateAdjacentMineCounts() {
         const directions = [
-            [-1, -1],//up left, 
-            [-1, 0],//up 
-            [0, -1],         [0, 1],
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1],           [0, 1],
             [1, -1], [1, 0], [1, 1]
         ];
         
@@ -105,6 +105,28 @@ class Grid {
                     cell.adjacentMines = count;
                 }
             });
+        });
+    }
+
+    revealAdjacentCells(row, column) {
+        const directions = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1],           [0, 1],
+            [1, -1], [1, 0], [1, 1]
+        ];
+
+        directions.forEach(([dx, dy]) => {
+            const newRow = row + dx;
+            const newColumn = column + dy;
+            if (this.isValid(newRow, newColumn)) {
+                const adjacentCell = this.getCell(newRow, newColumn);
+                if (!adjacentCell.revealed && !adjacentCell.flagged) {
+                    adjacentCell.reveal();
+                    if (adjacentCell.adjacentMines === 0) {
+                        this.revealAdjacentCells(newRow, newColumn);
+                    }
+                }
+            }
         });
     }
 
@@ -132,6 +154,7 @@ class Grid {
         console.log('');
     }
 }
+
 
 class GameTracker {
     constructor(size) {
@@ -202,7 +225,7 @@ class Player {
             console.log(`Cell (${row}, ${column}) flagged.`);
         } else {
             const isSafe = this.gameTracker.getGrid().revealCell(row, column);
-            console.log(`(row: ${row}, col: ${column}): value: ${cell.value ? "mine" : "no mine here"}`);
+            console.log(`Cell(${row}, ${column}) value: ${cell.value ? "mine" : "no mine here"}`);
     
             if (!isSafe) {
                 this.gameTracker.setGameState(false);
@@ -227,4 +250,3 @@ class Player {
 const gameTracker = new GameTracker(GRID_SIZE);
 const player = new Player(gameTracker);
 player.start();
-
