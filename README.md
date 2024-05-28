@@ -10,8 +10,10 @@ When you start the game, you'll be asked if you want to begin. Type 'y' to start
 Flagging Mines: If you suspect a cell contains a mine, you can flag it by entering the cell number followed by 'f' (e.g., 10f).
 ## Game Flow
 **First Click:** The game ensures that your first click is never a mine.
+
 **Reveal or Flag:** Continue revealing cells or flagging suspected mines. If a cell with no adjacent mines is revealed, the game will automatically reveal surrounding cells.
-Win or Lose: If you reveal a mine, the game ends, and all mines are revealed. If you successfully reveal all non-mine cells, you win.
+
+**Win or Lose:** If you reveal a mine, the game ends, and all mines are revealed. If you successfully reveal all non-mine cells, you win.
 
 ### Key Features
 **Randomized Mines:** Mines are randomly placed in the grid, providing a unique experience every game.
@@ -36,7 +38,7 @@ Enjoy the challenge of Minesweeper, and test your logic and strategy skills. Hap
 
 Run the game using Node.js:
 ```sh
-node main.js
-
+node grid.js
+```
 ### License
 This project is licensed under the MIT License. See the LICENSE file for details.
